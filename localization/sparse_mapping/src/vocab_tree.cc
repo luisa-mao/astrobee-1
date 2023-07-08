@@ -584,7 +584,7 @@ void BuildDBforDBoW2(SparseMap* map, std::string const& descriptor,
                      int depth, int branching_factor,
                      int restarts) {
   int num_frames = map->GetNumFrames();
-  depth = 6;
+  depth = 5;
   const DBoW2::WeightingType weight = DBoW2::TF_IDF;
   const DBoW2::ScoringType score = DBoW2::L1_NORM;
   int num_features = 0;
