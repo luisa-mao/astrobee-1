@@ -396,12 +396,6 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
     std::cout << observations.size() << " Ransac observations "
               << best_inliers << " inliers\n";
 
-  // TODO(bcoltin): Return some sort of confidence?
-  if (best_inliers < FLAGS_num_min_localization_inliers) {
-    std::cout << FLAGS_num_min_localization_inliers<< std::endl;
-    return 2;
-  }
-
   std::vector<size_t> inliers;
   CountInliers(landmarks, observations, *camera_estimate, inlier_tolerance, &inliers);
   std::vector<Eigen::Vector3d> inlier_landmarks;
@@ -412,6 +406,23 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
     inlier_landmarks.push_back(landmarks[idx]);
     inlier_observations.push_back(observations[idx]);
   }
+
+  // TODO(bcoltin): Return some sort of confidence?
+  if (best_inliers < FLAGS_num_min_localization_inliers) {
+    std::cout << FLAGS_num_min_localization_inliers<< std::endl;
+      if (inlier_landmarks_out) {
+        inlier_landmarks_out->reserve(inliers.size());
+        std::copy(inlier_landmarks.begin(), inlier_landmarks.end(),
+            std::back_inserter(*inlier_landmarks_out));
+      }
+      if (inlier_observations_out) {
+        inlier_observations_out->reserve(inliers.size());
+        std::copy(inlier_observations.begin(), inlier_observations.end(),
+            std::back_inserter(*inlier_observations_out));
+      }
+    return 2;
+  }
+
 
   ceres::Solver::Options options;
   options.linear_solver_type = ceres::ITERATIVE_SCHUR;

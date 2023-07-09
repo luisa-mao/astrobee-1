@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <iostream>
+#include <opencv2/opencv.hpp>
 
 namespace localization_analysis {
 namespace lc = localization_common;
@@ -78,9 +79,24 @@ void MapMatcher::AddMapMatches() {
   topics.push_back(std::string("/") + image_topic_);
   rosbag::View view(input_bag_, rosbag::TopicQuery(topics));
   image_count_ = view.size();
+  int count = 0;
   for (const rosbag::MessageInstance msg : view) {
     if (string_ends_with(msg.getTopic(), image_topic_)) {
       sensor_msgs::ImageConstPtr image_msg = msg.instantiate<sensor_msgs::Image>();
+      //////////////////////////////
+      // save image to directory
+      cv_bridge::CvImagePtr cv_image = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+      cv::Mat image = cv_image->image;
+
+      std::string save_directory = "/home/lmao/Documents/test_images/";
+      std::string file_name = std::to_string(count)+".jpg";
+      std::string save_path = save_directory + file_name;
+
+      cv::imwrite(save_path, image);
+      std::cout << "Saved image to: " << save_path << std::endl;
+
+      count++;
+      //////////////////////////////
       ff_msgs::VisualLandmarks vl_msg;
       if (GenerateVLFeatures(image_msg, vl_msg)) {
         match_count_++;

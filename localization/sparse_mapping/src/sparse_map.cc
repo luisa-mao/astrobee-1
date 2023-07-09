@@ -46,6 +46,11 @@
 #include <thread>
 #include <limits>
 
+#include "../test/json.hpp"
+
+using json = nlohmann::json;
+
+
 DEFINE_int32(num_similar, 20,
              "Use in localization this many images which "
              "are most similar to the image to localize.");
@@ -668,6 +673,7 @@ bool Localize(cv::Mat const& test_descriptors,
               int num_ransac_iterations, int ransac_inlier_tolerance,
               int early_break_landmarks, int histogram_equalization,
               std::vector<int> * cid_list) {
+  static int localization_calls = 0; // count the number of function calls
   std::vector<int> indices;
   // Query the vocab tree.
   if (cid_list == NULL)
@@ -764,6 +770,107 @@ bool Localize(cv::Mat const& test_descriptors,
                                  ransac_inlier_tolerance, pose,
                                  inlier_landmarks, inlier_observations,
                                  FLAGS_verbose_localization);
+
+
+    /////////////////////////////
+    // save data for analysis
+    // Read existing JSON data from the file
+    // get existing data
+    std::ifstream inputFile("/home/lmao/Documents/test_data.json");
+    json existingData;
+    if (inputFile.is_open())
+    {
+        // File exists, so read the existing JSON data
+        inputFile >> existingData;
+        inputFile.close();
+    }
+    else
+    {
+        // File doesn't exist, create a new JSON object
+        existingData = json::array();
+    }
+
+    // create json for this data
+    json newData;
+    newData["id"] = localization_calls;
+    localization_calls++;
+    newData["localized"] = ret;
+    // serialize landmarks
+    json landmarksArray = json::array();
+    for (const auto& landmark : landmarks)
+    {
+        json landmarkJson;
+        landmarkJson["x"] = landmark.x();
+        landmarkJson["y"] = landmark.y();
+        landmarkJson["z"] = landmark.z();
+
+        landmarksArray.push_back(landmarkJson);
+    }
+    newData["landmarks"] = landmarksArray;
+    // serialize observations
+    json observationsArray = json::array();
+    Eigen::Vector2d output;
+    for (const auto& obs : observations)
+    {
+        json obsJson;
+        camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
+        (obs, &output);
+        obsJson["x"] = output.x();
+        obsJson["y"] = output.y();
+
+        observationsArray.push_back(obsJson);
+    }
+    newData["observations"] = observationsArray;
+    // serialize inlier_landmarks
+    json inlierLandmarksArray = json::array();
+    for (const auto& inlier_landmark : *inlier_landmarks)
+    {
+        json inlierLandmarkJson;
+        inlierLandmarkJson["x"] = inlier_landmark.x();
+        inlierLandmarkJson["y"] = inlier_landmark.y();
+        inlierLandmarkJson["z"] = inlier_landmark.z();
+
+        inlierLandmarksArray.push_back(inlierLandmarkJson);
+    }
+    newData["inlier_landmarks"] = inlierLandmarksArray;
+    // serialize inlier_observations
+    json inlierObsArray = json::array();
+    for (const auto& inlier_obs : *inlier_observations)
+    {
+        json inlierObsJson;
+        camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
+        (inlier_obs, &output);
+        inlierObsJson["x"] = output.x();
+        inlierObsJson["y"] = output.y();
+
+        inlierObsArray.push_back(inlierObsJson);
+    }
+    newData["inlier_observations"] = inlierObsArray;
+    // serialize similar image file names
+    json similarImagesArray = json::array();
+    for (int i = 0; i < end; i++) {
+        int cid = indices[highly_ranked[i]];
+        std::string filename = cid_to_filename[cid]; // split this to get just the filename
+        filename = filename.substr(filename.find_last_of("/\\") + 1);
+        similarImagesArray.push_back(filename);
+    }
+    newData["similar_images"] = similarImagesArray;
+
+    existingData.push_back(newData);
+    std::ofstream outputFile("/home/lmao/Documents/test_data.json");
+    if (outputFile.is_open())
+    {
+        outputFile << existingData.dump(4); // Write formatted JSON with indentation of 4 spaces
+        outputFile.close();
+        std::cout << "JSON data saved to /home/lmao/Documents/test_data.json"<< std::endl;
+    }
+    else
+    {
+        std::cerr << "Failed to open file for writing" << std::endl;
+    }
+    
+
+    /////////////////////////////
   return (ret == 0);
 }
 
