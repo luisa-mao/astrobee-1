@@ -757,7 +757,7 @@ bool Localize(cv::Mat const& test_descriptors,
                           test_keypoints.col(matches->at(j).queryIdx)[1]);
       observations.push_back(obs);
       landmarks.push_back(pid_to_xyz[landmark_id]);
-      seen_landmarks.insert(landmark_id);
+      // seen_landmarks.insert(landmark_id);
       num_matches++;
     }
     if (FLAGS_verbose_localization && num_matches > 0)
@@ -795,33 +795,33 @@ bool Localize(cv::Mat const& test_descriptors,
     newData["id"] = localization_calls;
     localization_calls++;
     newData["localized"] = ret;
-    // serialize landmarks
-    json landmarksArray = json::array();
-    for (const auto& landmark : landmarks)
-    {
-        json landmarkJson;
-        landmarkJson["x"] = landmark.x();
-        landmarkJson["y"] = landmark.y();
-        landmarkJson["z"] = landmark.z();
+    // // serialize landmarks
+    // json landmarksArray = json::array();
+    // for (const auto& landmark : landmarks)
+    // {
+    //     json landmarkJson;
+    //     landmarkJson["x"] = landmark.x();
+    //     landmarkJson["y"] = landmark.y();
+    //     landmarkJson["z"] = landmark.z();
 
-        landmarksArray.push_back(landmarkJson);
-    }
-    newData["landmarks"] = landmarksArray;
-    // serialize observations
-    json observationsArray = json::array();
-    Eigen::Vector2d output;
-    for (const auto& obs : observations)
-    {
-        json obsJson;
-        camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
-        (obs, &output);
-        obsJson["x"] = output.x();
-        obsJson["y"] = output.y();
+    //     landmarksArray.push_back(landmarkJson);
+    // }
+    // newData["landmarks"] = landmarksArray;
+    // // serialize observations
+    // json observationsArray = json::array();
+    // for (const auto& obs : observations)
+    // {
+    //     json obsJson;
+    //     camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
+    //     (obs, &output);
+    //     obsJson["x"] = output.x();
+    //     obsJson["y"] = output.y();
 
-        observationsArray.push_back(obsJson);
-    }
-    newData["observations"] = observationsArray;
+    //     observationsArray.push_back(obsJson);
+    // }
+    // newData["observations"] = observationsArray;
     // serialize inlier_landmarks
+    Eigen::Vector2d output;
     json inlierLandmarksArray = json::array();
     for (const auto& inlier_landmark : *inlier_landmarks)
     {
@@ -846,15 +846,63 @@ bool Localize(cv::Mat const& test_descriptors,
         inlierObsArray.push_back(inlierObsJson);
     }
     newData["inlier_observations"] = inlierObsArray;
-    // serialize similar image file names
-    json similarImagesArray = json::array();
+    // // serialize similar image file names
+    // json similarImagesArray = json::array();
+    // for (int i = 0; i < end; i++) {
+    //     int cid = indices[highly_ranked[i]];
+    //     std::string filename = cid_to_filename[cid]; // split this to get just the filename
+    //     filename = filename.substr(filename.find_last_of("/\\") + 1);
+    //     similarImagesArray.push_back(filename);
+    // }
+    // newData["similar_images"] = similarImagesArray;
+    // serialize pose
+    json poseJson;
+    poseJson["x"] = pose->GetPosition()[0];
+    poseJson["y"] = pose->GetPosition()[1];
+    poseJson["z"] = pose->GetPosition()[2];
+    newData["pose"] = poseJson;
+    // for each similar image, serialize matches
+    json matchesArray = json::array();
     for (int i = 0; i < end; i++) {
         int cid = indices[highly_ranked[i]];
+        std::vector<cv::DMatch>* matches = &all_matches[highly_ranked[i]];
         std::string filename = cid_to_filename[cid]; // split this to get just the filename
         filename = filename.substr(filename.find_last_of("/\\") + 1);
-        similarImagesArray.push_back(filename);
+        json matchJson;
+        matchJson["filename"] = filename;
+        json landmarksArray = json::array();
+        json query_idx_Array = json::array();
+        for (size_t j = 0; j < matches->size(); j++) {
+            if (cid_fid_to_pid[cid].count(matches->at(j).trainIdx) == 0)
+                continue;
+            const int landmark_id = cid_fid_to_pid.at(cid).at(matches->at(j).trainIdx);
+
+            Eigen::Vector2d output;
+
+            Eigen::Vector2d query_obs(test_keypoints.col(matches->at(j).queryIdx)[0],
+                                test_keypoints.col(matches->at(j).queryIdx)[1]);
+            camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
+            (query_obs, &output);
+            json query_match;
+            query_match["x"] = output.x();
+            query_match["y"] = output.y();
+
+            const auto& landmark = pid_to_xyz[landmark_id];
+            json landmarkJson;
+            landmarkJson["x"] = landmark.x();
+            landmarkJson["y"] = landmark.y();
+            landmarkJson["z"] = landmark.z();
+
+            landmarksArray.push_back(landmarkJson);
+            query_idx_Array.push_back(query_match);
+
+        }
+
+        matchJson["landmarks"] = landmarksArray;
+        matchJson["query_obs"] = query_idx_Array;
+        matchesArray.push_back(matchJson);
     }
-    newData["similar_images"] = similarImagesArray;
+    newData["matches"] = matchesArray;
 
     existingData.push_back(newData);
     std::ofstream outputFile("/home/lmao/Documents/test_data.json");
