@@ -314,7 +314,7 @@ void SparseMap::Load(const std::string & protobuf_file, bool localization) {
 
   cid_to_filename_.resize(num_frames);
   cid_to_descriptor_map_.resize(num_frames);
-  if (!localization) {
+  if (!localization or true) { // change later
     cid_to_keypoint_map_.resize(num_frames);
     cid_to_cam_t_global_.resize(num_frames);
   }
@@ -331,7 +331,7 @@ void SparseMap::Load(const std::string & protobuf_file, bool localization) {
       cid_to_filename_[cid] = "";
 
     // load keypoints
-    if (!localization)
+    if (!localization or true) // change later
       cid_to_keypoint_map_[cid].resize(Eigen::NoChange_t(), frame.feature_size());
 
     // Poke the first frame's first descriptor to see how long the
@@ -350,7 +350,7 @@ void SparseMap::Load(const std::string & protobuf_file, bool localization) {
       sparse_mapping_protobuf::Feature feature = frame.feature(fid);
 
       // Copy the features
-      if (!localization)
+      if (!localization or true) // change later
         cid_to_keypoint_map_[cid].col(fid) << feature.x(), feature.y();
 
       // Copy the descriptors
@@ -795,32 +795,6 @@ bool Localize(cv::Mat const& test_descriptors,
     newData["id"] = localization_calls;
     localization_calls++;
     newData["localized"] = ret;
-    // // serialize landmarks
-    // json landmarksArray = json::array();
-    // for (const auto& landmark : landmarks)
-    // {
-    //     json landmarkJson;
-    //     landmarkJson["x"] = landmark.x();
-    //     landmarkJson["y"] = landmark.y();
-    //     landmarkJson["z"] = landmark.z();
-
-    //     landmarksArray.push_back(landmarkJson);
-    // }
-    // newData["landmarks"] = landmarksArray;
-    // // serialize observations
-    // json observationsArray = json::array();
-    // for (const auto& obs : observations)
-    // {
-    //     json obsJson;
-    //     camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
-    //     (obs, &output);
-    //     obsJson["x"] = output.x();
-    //     obsJson["y"] = output.y();
-
-    //     observationsArray.push_back(obsJson);
-    // }
-    // newData["observations"] = observationsArray;
-    // serialize inlier_landmarks
     Eigen::Vector2d output;
     json inlierLandmarksArray = json::array();
     for (const auto& inlier_landmark : *inlier_landmarks)
@@ -846,16 +820,6 @@ bool Localize(cv::Mat const& test_descriptors,
         inlierObsArray.push_back(inlierObsJson);
     }
     newData["inlier_observations"] = inlierObsArray;
-    // // serialize similar image file names
-    // json similarImagesArray = json::array();
-    // for (int i = 0; i < end; i++) {
-    //     int cid = indices[highly_ranked[i]];
-    //     std::string filename = cid_to_filename[cid]; // split this to get just the filename
-    //     filename = filename.substr(filename.find_last_of("/\\") + 1);
-    //     similarImagesArray.push_back(filename);
-    // }
-    // newData["similar_images"] = similarImagesArray;
-    // serialize pose
     json poseJson;
     poseJson["x"] = pose->GetPosition()[0];
     poseJson["y"] = pose->GetPosition()[1];
