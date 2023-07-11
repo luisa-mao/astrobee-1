@@ -314,7 +314,7 @@ void SparseMap::Load(const std::string & protobuf_file, bool localization) {
 
   cid_to_filename_.resize(num_frames);
   cid_to_descriptor_map_.resize(num_frames);
-  if (!localization or true) { // change later
+  if (!localization or true) {  // change later
     cid_to_keypoint_map_.resize(num_frames);
     cid_to_cam_t_global_.resize(num_frames);
   }
@@ -331,7 +331,7 @@ void SparseMap::Load(const std::string & protobuf_file, bool localization) {
       cid_to_filename_[cid] = "";
 
     // load keypoints
-    if (!localization or true) // change later
+    if (!localization or true)  // change later
       cid_to_keypoint_map_[cid].resize(Eigen::NoChange_t(), frame.feature_size());
 
     // Poke the first frame's first descriptor to see how long the
@@ -350,7 +350,7 @@ void SparseMap::Load(const std::string & protobuf_file, bool localization) {
       sparse_mapping_protobuf::Feature feature = frame.feature(fid);
 
       // Copy the features
-      if (!localization or true) // change later
+      if (!localization or true)  // change later
         cid_to_keypoint_map_[cid].col(fid) << feature.x(), feature.y();
 
       // Copy the descriptors
@@ -673,7 +673,7 @@ bool Localize(cv::Mat const& test_descriptors,
               int num_ransac_iterations, int ransac_inlier_tolerance,
               int early_break_landmarks, int histogram_equalization,
               std::vector<int> * cid_list) {
-  static int localization_calls = 0; // count the number of function calls
+  static int localization_calls = 0;  // count the number of function calls
   std::vector<int> indices;
   // Query the vocab tree.
   if (cid_list == NULL)
@@ -778,16 +778,13 @@ bool Localize(cv::Mat const& test_descriptors,
     // get existing data
     std::ifstream inputFile("/home/lmao/Documents/test_data.json");
     json existingData;
-    if (inputFile.is_open())
-    {
-        // File exists, so read the existing JSON data
-        inputFile >> existingData;
-        inputFile.close();
-    }
-    else
-    {
-        // File doesn't exist, create a new JSON object
-        existingData = json::array();
+    if (inputFile.is_open()) {
+      // File exists, so read the existing JSON data
+      inputFile >> existingData;
+      inputFile.close();
+    } else {
+      // File doesn't exist, create a new JSON object
+      existingData = json::array();
     }
 
     // create json for this data
@@ -797,27 +794,24 @@ bool Localize(cv::Mat const& test_descriptors,
     newData["localized"] = ret;
     Eigen::Vector2d output;
     json inlierLandmarksArray = json::array();
-    for (const auto& inlier_landmark : *inlier_landmarks)
-    {
-        json inlierLandmarkJson;
-        inlierLandmarkJson["x"] = inlier_landmark.x();
-        inlierLandmarkJson["y"] = inlier_landmark.y();
-        inlierLandmarkJson["z"] = inlier_landmark.z();
+    for (const auto& inlier_landmark : *inlier_landmarks) {
+      json inlierLandmarkJson;
+      inlierLandmarkJson["x"] = inlier_landmark.x();
+      inlierLandmarkJson["y"] = inlier_landmark.y();
+      inlierLandmarkJson["z"] = inlier_landmark.z();
 
-        inlierLandmarksArray.push_back(inlierLandmarkJson);
+      inlierLandmarksArray.push_back(inlierLandmarkJson);
     }
     newData["inlier_landmarks"] = inlierLandmarksArray;
     // serialize inlier_observations
     json inlierObsArray = json::array();
-    for (const auto& inlier_obs : *inlier_observations)
-    {
-        json inlierObsJson;
-        camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
-        (inlier_obs, &output);
-        inlierObsJson["x"] = output.x();
-        inlierObsJson["y"] = output.y();
+    for (const auto& inlier_obs : *inlier_observations) {
+      json inlierObsJson;
+      camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>(inlier_obs, &output);
+      inlierObsJson["x"] = output.x();
+      inlierObsJson["y"] = output.y();
 
-        inlierObsArray.push_back(inlierObsJson);
+      inlierObsArray.push_back(inlierObsJson);
     }
     newData["inlier_observations"] = inlierObsArray;
     json poseJson;
@@ -830,7 +824,7 @@ bool Localize(cv::Mat const& test_descriptors,
     for (int i = 0; i < end; i++) {
         int cid = indices[highly_ranked[i]];
         std::vector<cv::DMatch>* matches = &all_matches[highly_ranked[i]];
-        std::string filename = cid_to_filename[cid]; // split this to get just the filename
+        std::string filename = cid_to_filename[cid];  // split this to get just the filename
         filename = filename.substr(filename.find_last_of("/\\") + 1);
         json matchJson;
         matchJson["filename"] = filename;
@@ -859,7 +853,6 @@ bool Localize(cv::Mat const& test_descriptors,
 
             landmarksArray.push_back(landmarkJson);
             query_idx_Array.push_back(query_match);
-
         }
 
         matchJson["landmarks"] = landmarksArray;
@@ -870,17 +863,13 @@ bool Localize(cv::Mat const& test_descriptors,
 
     existingData.push_back(newData);
     std::ofstream outputFile("/home/lmao/Documents/test_data.json");
-    if (outputFile.is_open())
-    {
-        outputFile << existingData.dump(4); // Write formatted JSON with indentation of 4 spaces
-        outputFile.close();
-        std::cout << "JSON data saved to /home/lmao/Documents/test_data.json"<< std::endl;
+    if (outputFile.is_open()) {
+      outputFile << existingData.dump(4);  // Write formatted JSON with indentation of 4 spaces
+      outputFile.close();
+      std::cout << "JSON data saved to /home/lmao/Documents/test_data.json" << std::endl;
+    } else {
+      std::cerr << "Failed to open file for writing" << std::endl;
     }
-    else
-    {
-        std::cerr << "Failed to open file for writing" << std::endl;
-    }
-    
 
     /////////////////////////////
   return (ret == 0);
