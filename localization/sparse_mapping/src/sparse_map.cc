@@ -731,9 +731,10 @@ bool Localize(cv::Mat const& test_descriptors,
                 << all_matches[i].size() << " "
                 << similarity_rank[i] << "\n";
     total += similarity_rank[i];
-    if (total >= early_break_landmarks)
+    if (total >= early_break_landmarks) {
       std::cout << "total " << total << " early break landmarks " << early_break_landmarks << std::endl;
-    break;
+      break;
+    }
   }
 
   std::vector<Eigen::Vector2d> observations;
@@ -821,15 +822,17 @@ bool Localize(cv::Mat const& test_descriptors,
     newData["pose"] = poseJson;
     // for each similar image, serialize matches
     json matchesArray = json::array();
-    for (int i = 0; i < end; i++) {
+    for (int i = 0; i < highly_ranked.size(); i++) {
         int cid = indices[highly_ranked[i]];
         std::vector<cv::DMatch>* matches = &all_matches[highly_ranked[i]];
+        // std::cout << "cid: " << cid << "size" << matches->size() <<std::endl;
         std::string filename = cid_to_filename[cid];  // split this to get just the filename
         filename = filename.substr(filename.find_last_of("/\\") + 1);
         json matchJson;
         matchJson["filename"] = filename;
         json landmarksArray = json::array();
         json query_idx_Array = json::array();
+        json train_idx_Array = json::array();
         for (size_t j = 0; j < matches->size(); j++) {
             if (cid_fid_to_pid[cid].count(matches->at(j).trainIdx) == 0)
                 continue;
@@ -845,6 +848,14 @@ bool Localize(cv::Mat const& test_descriptors,
             query_match["x"] = output.x();
             query_match["y"] = output.y();
 
+            Eigen::Matrix2Xd train_keypoints = cid_to_keypoint_map[cid];
+            Eigen::Vector2d train_obs = train_keypoints.col(matches->at(j).trainIdx);
+            camera_params.Convert<camera::UNDISTORTED_C, camera::DISTORTED_C>
+            (train_obs, &output);
+            json train_match;
+            train_match["x"] = output.x();
+            train_match["y"] = output.y();
+
             const auto& landmark = pid_to_xyz[landmark_id];
             json landmarkJson;
             landmarkJson["x"] = landmark.x();
@@ -853,10 +864,12 @@ bool Localize(cv::Mat const& test_descriptors,
 
             landmarksArray.push_back(landmarkJson);
             query_idx_Array.push_back(query_match);
+            train_idx_Array.push_back(train_match);
         }
 
         matchJson["landmarks"] = landmarksArray;
         matchJson["query_obs"] = query_idx_Array;
+        matchJson["train_obs"] = train_idx_Array;
         matchesArray.push_back(matchJson);
     }
     newData["matches"] = matchesArray;
