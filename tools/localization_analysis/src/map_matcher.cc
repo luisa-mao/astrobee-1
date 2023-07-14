@@ -84,18 +84,18 @@ void MapMatcher::AddMapMatches() {
     if (string_ends_with(msg.getTopic(), image_topic_)) {
       sensor_msgs::ImageConstPtr image_msg = msg.instantiate<sensor_msgs::Image>();
       //////////////////////////////
-      // save image to directory
-      cv_bridge::CvImagePtr cv_image = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
-      cv::Mat image = cv_image->image;
+      // // save image to directory
+      // cv_bridge::CvImagePtr cv_image = cv_bridge::toCvCopy(image_msg, sensor_msgs::image_encodings::BGR8);
+      // cv::Mat image = cv_image->image;
 
-      std::string save_directory = "/home/lmao/Documents/test_images/";
-      std::string file_name = std::to_string(count)+".jpg";
-      std::string save_path = save_directory + file_name;
+      // std::string save_directory = "/home/lmao/Documents/test_images/";
+      // std::string file_name = std::to_string(count)+".jpg";
+      // std::string save_path = save_directory + file_name;
 
-      cv::imwrite(save_path, image);
-      std::cout << "Saved image to: " << save_path << std::endl;
+      // cv::imwrite(save_path, image);
+      // std::cout << "Saved image to: " << save_path << std::endl;
 
-      count++;
+      // count++;
       //////////////////////////////
       ff_msgs::VisualLandmarks vl_msg;
       if (GenerateVLFeatures(image_msg, vl_msg)) {

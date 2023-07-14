@@ -33,7 +33,7 @@
 // map file, for the localize executable to read them from there.
 DEFINE_int32(hamming_distance, 90,
              "A smaller value keeps fewer but more reliable binary descriptor matches.");
-DEFINE_double(goodness_ratio, 0.8,
+DEFINE_double(goodness_ratio, 0.7,
               "A smaller value keeps fewer but more reliable float descriptor matches.");
 DEFINE_int32(orgbrisk_octaves, 4,
              "Number of octaves, or scale spaces, that BRISK will evaluate.");
