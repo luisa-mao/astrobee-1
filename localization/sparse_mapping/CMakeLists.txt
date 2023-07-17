@@ -92,8 +92,20 @@ target_link_libraries(sparse_mapping
   ${PROTOBUF_LIBRARIES}
 )
 
+## this stuff for Python.h
+find_package(PythonLibs REQUIRED)
+include_directories(${PYTHON_INCLUDE_DIRS})
+target_link_libraries(sparse_mapping ${PYTHON_LIBRARIES})
+
 
 if (NOT USE_CTC)
+
+## Declare a C++ executable: segment_match
+add_executable(segment_match test/segment_match.cc)
+add_dependencies(segment_match ${catkin_EXPORTED_TARGETS})
+target_link_libraries(segment_match
+  sparse_mapping gflags glog ${catkin_LIBRARIES})
+
 ## Declare a C++ executable: profiling
 add_executable(profiling test/profiling.cc)
 add_dependencies(profiling ${catkin_EXPORTED_TARGETS})
@@ -111,7 +123,6 @@ add_executable(test_matches test/test_matches.cc)
 add_dependencies(test_matches ${catkin_EXPORTED_TARGETS})
 target_link_libraries(test_matches
   sparse_mapping gflags glog ${catkin_LIBRARIES})
-
 
 ## Declare a C++ executable: build_map
 add_executable(build_map tools/build_map.cc)

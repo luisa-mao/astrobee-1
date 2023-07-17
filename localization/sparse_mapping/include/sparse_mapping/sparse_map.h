@@ -300,7 +300,7 @@ struct SparseMap {
   std::vector<Eigen::Vector3d> user_pid_to_xyz_;
   std::mutex mutex_detector_;
 
- private:
+//  private: // change this lol
   // Create an empty map. It is strongly recommended to not use this function,
   // as it requires carefully initializing many members. Hence this is made
   // private. Consider using the other constructors.

@@ -47,6 +47,8 @@
 #include <limits>
 
 #include "../test/json.hpp"
+// #include <google/protobuf/descriptor.pb.h>
+
 
 using json = nlohmann::json;
 
@@ -282,6 +284,7 @@ void SparseMap::Load(const std::string & protobuf_file, bool localization) {
 
   google::protobuf::io::ZeroCopyInputStream* input =
     new google::protobuf::io::FileInputStream(input_fd);
+
   if (!ReadProtobufFrom(input, &map)) {
     LOG(FATAL) << "Failed to parse map file.";
   }
@@ -589,6 +592,7 @@ void SparseMap::DetectFeaturesFromFile(std::string const& filename,
                                        bool multithreaded,
                                        cv::Mat* descriptors,
                                        Eigen::Matrix2Xd* keypoints) {
+  std::cout << "Detecting features in " << filename << std::endl;
   cv::Mat image = cv::imread(filename, cv::IMREAD_GRAYSCALE);
   if (image.rows == 0 || image.cols == 0)
     LOG(FATAL) << "Found empty image in file: " << filename;
@@ -623,6 +627,7 @@ void SparseMap::DetectFeatures(const cv::Mat& image,
   std::vector<cv::KeyPoint> storage;
   mutex_detector_.lock();
   if (!multithreaded) {
+    std::cout << "Detecting features, not multithreaded" << std::endl;
     detector_.Detect(*image_ptr, &storage, descriptors);
   } else {
     // When using multiple threads, need an individual detector
