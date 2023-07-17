@@ -94,14 +94,15 @@ void get_all_matches_for_sim_img(std::string const& query_img_path, std::string 
 
 void create_map(){
     // Create a Sparse Map
-    sparse_mapping::SparseMap map("/home/lmao/Documents/20210304_aach.surf.vocab.hist_eq.map", true);
+    sparse_mapping::SparseMap map("/home/lmao/Documents/20210304_aach.map", true);
     std::cout<<"Loaded map with "<<map.GetNumFrames()<<std::endl;
 }
 
 void get_module() {
     // Import the Python module containing your functions
-    PyObject* module_name = PyUnicode_FromString("test_matches");
-    std::cout << "module_name: " << module_name << std::endl;
+    // PyObject* module_name = PyUnicode_FromString("test_matches");
+    PyObject* module_name = PyUnicode_FromString("make_matches");
+    std::cout << "module_name: " << "make_matches" << std::endl;
     PyObject* module = PyImport_Import(module_name);
     std::cout << "module: " << module << std::endl;
     Py_DECREF(module_name);
@@ -130,68 +131,61 @@ int main() {
                        "sys.path.append('/home/lmao/Documents')");
     std::cout << "Set Python sys path" << std::endl;
 
-    // // Import the Python module containing your functions
-    // PyObject* module_name = PyUnicode_FromString("test_matches");
-    // std::cout << "module_name: " << module_name << std::endl;
-    // PyObject* module = PyImport_Import(module_name);
-    // std::cout << "module: " << module << std::endl;
-    // Py_DECREF(module_name);
-    // std::cout << "Imported Python module" << std::endl;
+    // Import the Python module containing your functions
+    PyObject* module_name = PyUnicode_FromString("test");
+    std::cout << "module_name: " << module_name << std::endl;
+    PyObject* module = PyImport_Import(module_name);
+    std::cout << "module: " << module << std::endl;
+    Py_DECREF(module_name);
+    std::cout << "Imported Python module" << std::endl;
 
-    // // Check if the module was imported successfully
-    // if (module == NULL) {
-    //     PyErr_Print();
-    //     Py_Finalize();
-    //     return 1;
-    // }
-    // std::cout << "Successfully imported Python module" << std::endl;
+    // Check if the module was imported successfully
+    if (module == NULL) {
+        PyErr_Print();
+        Py_Finalize();
+        return 1;
+    }
+    std::cout << "Successfully imported Python module" << std::endl;
 
-    // google::protobuf::DescriptorPool::generated_pool()->internal_generated_message_reflection().Clear();
-    // Clear the descriptor database
-    // Clear the descriptor database
-    // google::protobuf::DescriptorPool::generated_pool()->InternalShutdown();
-    get_module();
-    // create_map();
+    // Create a Sparse Map
+    sparse_mapping::SparseMap map("/home/lmao/Documents/20210304_aach.map", true);
+    std::cout<<"Loaded map with "<<map.GetNumFrames()<<std::endl;
 
-    // // Create a Sparse Map
-    // sparse_mapping::SparseMap map("/home/lmao/Documents/20210304_aach.surf.vocab.hist_eq.map", true);
-    // std::cout<<"Loaded map with "<<map.GetNumFrames()<<std::endl;
+    std::vector<int> indices;
+    cv::Mat test_descriptors;
+    Eigen::Matrix2Xd test_keypoints;
+    std::string img_path = "/home/lmao/Documents/yaw2_images/20.jpg";
+    std::cout << "img_path: " << img_path << std::endl;
+    map.DetectFeaturesFromFile(img_path,
+                                      false,
+                                      &test_descriptors,
+                                      &test_keypoints);
+    std::cout << "test_descriptors: " << test_descriptors.size() << std::endl;
 
-    // std::vector<int> indices;
-    // cv::Mat test_descriptors;
-    // Eigen::Matrix2Xd test_keypoints;
-    // std::string img_path = "/home/lmao/Documents/test_images/20.jpg";
-    // std::cout << "img_path: " << img_path << std::endl;
-    // map.DetectFeaturesFromFile(img_path,
-    //                                   false,
-    //                                   &test_descriptors,
-    //                                   &test_keypoints);
-    // std::cout << "test_descriptors: " << test_descriptors.size() << std::endl;
-
-    // // query the vocab database
-    // sparse_mapping::QueryDB(map.GetDetectorName(),
-    //                         &(map.vocab_db_),
-    //                         // Notice that we request more similar
-    //                         // images than what we need. We'll prune
-    //                         // them below.
-    //                         20,
-    //                         test_descriptors,
-    //                         &indices);
+    // query the vocab database
+    sparse_mapping::QueryDB(map.GetDetectorName(),
+                            &(map.vocab_db_),
+                            // Notice that we request more similar
+                            // images than what we need. We'll prune
+                            // them below.
+                            20,
+                            test_descriptors,
+                            &indices);
 
     
-    // int cid = indices[0];
-    // Eigen::Matrix2Xd keypoint_list = map.cid_to_keypoint_map_[cid];
-    // std::map<int, int> fid_to_pid = map.cid_fid_to_pid_[cid];
+    int cid = indices[0];
+    Eigen::Matrix2Xd keypoint_list = map.cid_to_keypoint_map_[cid];
+    std::map<int, int> fid_to_pid = map.cid_fid_to_pid_[cid];
 
-    // std::string map_image_dir = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
-    // std::string path = map.cid_to_filename_[cid];
-    // boost::filesystem::path filePath(path);
-    // std::string filename = filePath.filename().string();
-    // std::string sim_img_path = map_image_dir + filename;
-    // std::cout << "sim_img_path: " << sim_img_path << std::endl;
+    std::string map_image_dir = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
+    std::string path = map.cid_to_filename_[cid];
+    boost::filesystem::path filePath(path);
+    std::string filename = filePath.filename().string();
+    std::string sim_img_path = map_image_dir + filename;
+    std::cout << "sim_img_path: " << sim_img_path << std::endl;
 
-    // std::vector<Eigen::Vector2d> observations;
-    // std::vector<Eigen::Vector3d> landmarks;
+    std::vector<Eigen::Vector2d> observations;
+    std::vector<Eigen::Vector3d> landmarks;
 
     // get_all_matches_for_sim_img(img_path, sim_img_path,
     //                 keypoint_list,
@@ -202,8 +196,8 @@ int main() {
     //                 observations,
     //                 landmarks);
 
-    // // clean up
-    // Py_XDECREF(module);
+    // clean up
+    Py_XDECREF(module);
 
     // Finalize the Python interpreter
     Py_Finalize();
