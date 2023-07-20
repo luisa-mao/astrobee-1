@@ -80,6 +80,7 @@ add_library(sparse_mapping
   src/sparse_mapping.cc
   src/tensor.cc
   src/vocab_tree.cc
+  test/segment_match.cc
   ${PROTO_SRCS}
 )
 add_dependencies(sparse_mapping ${catkin_EXPORTED_TARGETS})

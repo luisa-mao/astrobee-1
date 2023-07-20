@@ -608,6 +608,7 @@ void SparseMap::DetectFeatures(const cv::Mat& image,
   cv::Mat * image_ptr = const_cast<cv::Mat*>(&image);
   cv::Mat hist_image;
   if (histogram_equalization_) {
+    // std::cout << "Performing histogram equalization" << std::endl;
     cv::equalizeHist(image, hist_image);
     image_ptr = &hist_image;
   }
@@ -627,7 +628,7 @@ void SparseMap::DetectFeatures(const cv::Mat& image,
   std::vector<cv::KeyPoint> storage;
   mutex_detector_.lock();
   if (!multithreaded) {
-    std::cout << "Detecting features, not multithreaded" << std::endl;
+    // std::cout << "Detecting features, not multithreaded" << std::endl;
     detector_.Detect(*image_ptr, &storage, descriptors);
   } else {
     // When using multiple threads, need an individual detector
@@ -685,7 +686,6 @@ int findMajority(const std::vector<int>& nums) {
         return -1;
     }
 }
-
 
 // A non-member Localize() function that can be invoked for a non-fully
 // formed map.

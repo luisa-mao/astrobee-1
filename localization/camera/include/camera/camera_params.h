@@ -132,7 +132,7 @@ namespace camera {
               A.distortion_precalc3_    == B.distortion_precalc3_);
     }
 
-   private:
+  //  private:
     // Converts UNDISTORTED_C to DISTORTED_C
     void DistortCentered(Eigen::Vector2d const& undistorted_c,
                          Eigen::Vector2d* distorted_c) const;

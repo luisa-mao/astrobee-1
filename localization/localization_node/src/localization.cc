@@ -92,14 +92,17 @@ bool Localizer::Localize(cv_bridge::CvImageConstPtr image_ptr, ff_msgs::VisualLa
   vl->header.stamp = image_ptr->header.stamp;
   vl->header.frame_id = "world";
 
+
   map_->DetectFeatures(image_ptr->image, multithreaded, &image_descriptors, image_keypoints);
   camera::CameraModel camera(Eigen::Vector3d(),
                              Eigen::Matrix3d::Identity(),
                              map_->GetCameraParameters());
   std::vector<Eigen::Vector3d> landmarks;
   std::vector<Eigen::Vector2d> observations;
-  if (!map_->Localize(image_descriptors, *image_keypoints,
-                               &camera, &landmarks, &observations)) {
+  // if (!map_->Localize(image_descriptors, *image_keypoints,
+  //                              &camera, &landmarks, &observations)) {
+  if (!sparse_mapping::semantic_localize(*map_, image_descriptors, *image_keypoints,
+                               camera, landmarks, observations)){
     LOG(INFO) << "Failed to localize image.";
     return false;
   }

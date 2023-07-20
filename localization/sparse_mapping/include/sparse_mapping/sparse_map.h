@@ -45,6 +45,11 @@ namespace cv {
 
 namespace sparse_mapping {
 
+// non-member hacky segment match
+bool test_func();
+bool semantic_localize(SparseMap & map, cv::Mat &image_descriptors, Eigen::Matrix2Xd &image_keypoints,
+                               camera::CameraModel &camera, std::vector<Eigen::Vector3d> &inlier_landmarks, std::vector<Eigen::Vector2d>&inlier_observations);
+
 // Non-member function InitializeCidFidToPid() that we will use within
 // this class and outside of it as well.
 void InitializeCidFidToPid(int num_cid,

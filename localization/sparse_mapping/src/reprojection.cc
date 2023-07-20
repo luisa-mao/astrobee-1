@@ -403,6 +403,9 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
   inlier_landmarks.reserve(inliers.size());
   inlier_observations.reserve(inliers.size());
   for (size_t idx : inliers) {
+    if (std::find(inlier_observations.begin(), inlier_observations.end(), observations[idx]) != inlier_observations.end()) {
+                    continue;
+    }
     inlier_landmarks.push_back(landmarks[idx]);
     inlier_observations.push_back(observations[idx]);
   }
@@ -410,17 +413,18 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
   // TODO(bcoltin): Return some sort of confidence?
   if (best_inliers < FLAGS_num_min_localization_inliers) {
     std::cout << FLAGS_num_min_localization_inliers<< std::endl;
-      if (inlier_landmarks_out) {
-        inlier_landmarks_out->reserve(inliers.size());
-        std::copy(inlier_landmarks.begin(), inlier_landmarks.end(),
-            std::back_inserter(*inlier_landmarks_out));
-      }
-      if (inlier_observations_out) {
-        inlier_observations_out->reserve(inliers.size());
-        std::copy(inlier_observations.begin(), inlier_observations.end(),
-            std::back_inserter(*inlier_observations_out));
-      }
-    return 2;
+    // commenting this out so it will refine camera pose even if it doesn't have enough inliers
+    //   if (inlier_landmarks_out) {
+    //     inlier_landmarks_out->reserve(inliers.size());
+    //     std::copy(inlier_landmarks.begin(), inlier_landmarks.end(),
+    //         std::back_inserter(*inlier_landmarks_out));
+    //   }
+    //   if (inlier_observations_out) {
+    //     inlier_observations_out->reserve(inliers.size());
+    //     std::copy(inlier_observations.begin(), inlier_observations.end(),
+    //         std::back_inserter(*inlier_observations_out));
+    //   }
+    // return 2;
   }
 
 
@@ -430,18 +434,45 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
   options.max_num_iterations = 100;
   options.minimizer_progress_to_stdout = false;
   ceres::Solver::Summary summary;
+
+  // print camera
+    std::cout << "camera: x " << camera_estimate->GetPosition()[0] << std::endl;
+    std::cout << "camera: y " << camera_estimate->GetPosition()[1] << std::endl;
+    std::cout << "camera: z " << camera_estimate->GetPosition()[2] << std::endl;
+
+
+  // print inlier landmarks size
+  std::cout << "inlier landmarks size: " << inlier_landmarks.size() << std::endl;
+  // print inlier observations size
+  std::cout << "inlier observations size: " << inlier_observations.size() << std::endl;
+  // print landmarks size
+  std::cout << "landmarks size: " << landmarks.size() << std::endl;
+  // print observations size
+  std::cout << "observations size: " << observations.size() << std::endl;
+
   // improve estimate with CERES solver
   EstimateCamera(camera_estimate, &inlier_landmarks, inlier_observations, options, &summary);
 
   // find inliers again with refined estimate
   inliers.clear();
   best_inliers = CountInliers(landmarks, observations, *camera_estimate, inlier_tolerance, &inliers);
+  
+  std::cout << "after ceres" << std::endl;
 
   if (verbose)
     std::cout << "Number of inliers with refined camera: " << best_inliers << "\n";
 
-  if (best_inliers < FLAGS_num_min_localization_inliers)
+  // if (best_inliers < FLAGS_num_min_localization_inliers)
+    // return 2;
+
+  // print camera
+    std::cout << "camera: x " << camera_estimate->GetPosition()[0] << std::endl;
+    std::cout << "camera: y " << camera_estimate->GetPosition()[1] << std::endl;
+    std::cout << "camera: z " << camera_estimate->GetPosition()[2] << std::endl;
+
+  if (best_inliers < 4)
     return 2;
+
 
   inlier_landmarks.clear();
   inlier_observations.clear();
