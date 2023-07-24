@@ -590,38 +590,38 @@ void BuildDBforDBoW2(SparseMap* map, std::string const& descriptor,
   int num_features = 0;
 
   if (!IsBinaryDescriptor(descriptor)) {
-    std::string dir_path = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
-    cv::Ptr<cv::Feature2D> fdetector = cv::xfeatures2d::SURF::create(400, 4, 2, false);
+    // std::string dir_path = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
+    // cv::Ptr<cv::Feature2D> fdetector = cv::xfeatures2d::SURF::create(400, 4, 2, false);
     std::vector<std::vector<DBoW2::FSurf64::TDescriptor > > features;
     for (int cid = 0; cid < num_frames; cid++) {
-      // int num_keys = map->GetFrameKeypoints(cid).outerSize();
-      // num_features += num_keys;
-      std::vector<DBoW2::FSurf64::TDescriptor> descriptors;
-      // for (int i = 0; i < num_keys; i++) {
-      //   cv::Mat row = map->GetDescriptor(cid, i);
-      //   DBoW2::FSurf64::TDescriptor descriptor;
-      //   MatDescrToVec(row, &descriptor);
-      //   descriptors.push_back(descriptor);
-      // }
-      std::string img_name = dir_path + getFilenameFromPath(map->GetFrameFilename(cid));
-      cv::Mat image = cv::imread(img_name, 0);
-      cv::Mat hist_image;
-      cv::Mat mask;
-      vector<cv::KeyPoint> keypoints;
-      cv::Mat descriptors_mat;
-      if (image.empty()) {
-        std::cout << img_name << " " << cid << std::endl;
-        continue;
-      }
-      cv::equalizeHist(image, hist_image);
-      fdetector->detectAndCompute(hist_image, mask, keypoints, descriptors_mat);
-      int num_keys = descriptors_mat.rows;
+      int num_keys = map->GetFrameKeypoints(cid).outerSize();
       num_features += num_keys;
+      std::vector<DBoW2::FSurf64::TDescriptor> descriptors;
       for (int i = 0; i < num_keys; i++) {
+        cv::Mat row = map->GetDescriptor(cid, i);
         DBoW2::FSurf64::TDescriptor descriptor;
-        MatDescrToVec(descriptors_mat.row(i), &descriptor);
+        MatDescrToVec(row, &descriptor);
         descriptors.push_back(descriptor);
       }
+      // std::string img_name = dir_path + getFilenameFromPath(map->GetFrameFilename(cid));
+      // cv::Mat image = cv::imread(img_name, 0);
+      // cv::Mat hist_image;
+      // cv::Mat mask;
+      // vector<cv::KeyPoint> keypoints;
+      // cv::Mat descriptors_mat;
+      // if (image.empty()) {
+      //   std::cout << img_name << " " << cid << std::endl;
+      //   continue;
+      // }
+      // cv::equalizeHist(image, hist_image);
+      // fdetector->detectAndCompute(hist_image, mask, keypoints, descriptors_mat);
+      // int num_keys = descriptors_mat.rows;
+      // num_features += num_keys;
+      // for (int i = 0; i < num_keys; i++) {
+      //   DBoW2::FSurf64::TDescriptor descriptor;
+      //   MatDescrToVec(descriptors_mat.row(i), &descriptor);
+      //   descriptors.push_back(descriptor);
+      // }
       features.push_back(descriptors);
     }
     LOG(INFO) << "Number of features: " << num_features;

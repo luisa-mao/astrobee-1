@@ -14,7 +14,9 @@ using json = nlohmann::json;
 
 class PythonInterpreter {
 public:
-    PyObject* module;  // Public member variable for the module
+    PyObject* get_matched_keypoints_for_sim_img_func;
+    PyObject* get_keypoints_from_masked_image_func;
+    PyObject* module;
     bool initialized = false;
     static PythonInterpreter& getInstance() {
         static PythonInterpreter instance;
@@ -41,6 +43,9 @@ public:
         std::cout << "module: " << module << std::endl;
         Py_DECREF(module_name);
         std::cout << "Imported Python module" << std::endl;
+        get_matched_keypoints_for_sim_img_func = PyObject_GetAttrString(module, "get_matched_keypoints_for_sim_img");
+        get_keypoints_from_masked_image_func = PyObject_GetAttrString(module, "get_keypoints_from_masked_image");
+
     }
 
 private:
@@ -50,6 +55,9 @@ private:
 
     ~PythonInterpreter() {
         // Destructor to clean up resources
+        Py_DECREF(get_matched_keypoints_for_sim_img_func);
+        Py_DECREF(get_keypoints_from_masked_image_func);
+        Py_DECREF(module);
         Py_Finalize();
     }
 
@@ -95,92 +103,12 @@ void saveDataToJson(const std::vector<Eigen::Vector2d>& observations, const std:
     }
 }
 
-void test_cpp_and_python_get_same_keypoints(sparse_mapping::SparseMap & map, PyObject* module) {
-    cv::Mat test_descriptors;
-    Eigen::Matrix2Xd test_keypoints;
-    std::string query_img_path = "/home/lmao/Documents/yaw2_images/129.jpg";
-    std::string sim_img_path = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/1599238881.9869831.jpg";
-    // std::cout << "img_path: " << img_path << std::endl;
-    map.DetectFeaturesFromFile(sim_img_path,
-                                      false,
-                                      &test_descriptors,
-                                      &test_keypoints);
-
-    PyObject* get_matched_keypoints_for_sim_img_func = PyObject_GetAttrString(module, "get_matched_keypoints_for_sim_img");
-    // Convert string arguments to PyObjects
-    PyObject* arg1Obj = PyUnicode_FromString(query_img_path.c_str());
-    PyObject* arg2Obj = PyUnicode_FromString(sim_img_path.c_str());
-
-    // Create a tuple of arguments
-    PyObject* argsTuple = PyTuple_New(2);
-    PyTuple_SetItem(argsTuple, 0, arg1Obj);
-    PyTuple_SetItem(argsTuple, 1, arg2Obj);
-
-    // std::cout << "created tuple of arguments "<< std::endl;
-
-    // Check if arg1Obj and arg2Obj were built correctly
-    const char* arg1 = PyUnicode_AsUTF8(arg1Obj);
-    const char* arg2 = PyUnicode_AsUTF8(arg2Obj);
-
-    PyObject* get_matched_keypoints_for_sim_img_result = PyObject_CallObject(get_matched_keypoints_for_sim_img_func, argsTuple);
-    Py_DECREF(argsTuple);
-
-    // std::cout << "called python function "<< std::endl;
-    
-    // Extract the individual elements from the tuple
-    PyObject* keypoints1_obj = PyTuple_GetItem(get_matched_keypoints_for_sim_img_result, 0);
-    PyObject* keypoints2_obj = PyTuple_GetItem(get_matched_keypoints_for_sim_img_result, 1);
-
-    // std::cout << "got keypoints "<< std::endl;
-
-    // Extract the keypoints from the lists
-    std::vector<Eigen::Vector2d> keypoints1;
-    std::vector<Eigen::Vector2d> keypoints2;
-
-    for (Py_ssize_t i = 0; i < PyList_Size(keypoints2_obj); ++i) {
-        PyObject* keypoint_obj = PyList_GetItem(keypoints2_obj, i);
-
-        float x = PyFloat_AsDouble(PyTuple_GetItem(keypoint_obj, 0));
-        float y = PyFloat_AsDouble(PyTuple_GetItem(keypoint_obj, 1));
-
-        // Create a cv::KeyPoint object and add it to keypoints2
-        Eigen::Vector2d keypoint(x - 1280/2, y - 960/2);
-        map.GetCameraParameters().Convert<camera::DISTORTED_C, camera::UNDISTORTED_C>(keypoint, &keypoint);
-        keypoints2.push_back(keypoint);
-    }
-    // print the lengths
-    std::cout << "test keypoints: " << test_keypoints.size() << std::endl;
-    std::cout << "keypoints2 length: " << keypoints2.size() << std::endl;
-    // check if all points in keypoints2 are in test_keypoints
-    for (auto& keypoint : keypoints2) {
-        bool found = false;
-        for (int i = 0; i < test_keypoints.cols(); ++i) {
-            if (keypoint == test_keypoints.col(i)) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            std::cout << "keypoint not found in test_keypoints" << std::endl;
-            // print the keypoint
-            std::cout << keypoint << std::endl;
-        }
-    }
-
-
-
-    // Cleanup
-    Py_XDECREF(get_matched_keypoints_for_sim_img_func);
-    Py_XDECREF(get_matched_keypoints_for_sim_img_result);
-}
-
-
 
 void get_all_matches_for_sim_img(std::string const& query_img_path, std::string const& sim_img_path,
                     Eigen::Matrix2Xd const& keypoint_list,
                     std::map<int, int> const& fid_to_pid,
                     std::vector<Eigen::Vector3d> const& pid_to_xyz,
-                    PyObject* module, 
+                    PyObject* get_matched_keypoints_for_sim_img_func, 
                     camera::CameraParameters const& camera_params,
                     std::vector<Eigen::Vector2d> &observations,
                     std::vector<Eigen::Vector3d> &landmarks
@@ -189,7 +117,6 @@ void get_all_matches_for_sim_img(std::string const& query_img_path, std::string 
     // don't forget to undistort the keypoints
 {
 
-    PyObject* get_matched_keypoints_for_sim_img_func = PyObject_GetAttrString(module, "get_matched_keypoints_for_sim_img");
     // Check if get_matched_keypoints_for_sim_img_func is a valid function object
     int isCallable = PyCallable_Check(get_matched_keypoints_for_sim_img_func);
 
@@ -257,7 +184,7 @@ void get_all_matches_for_sim_img(std::string const& query_img_path, std::string 
 
 
     // Cleanup
-    Py_XDECREF(get_matched_keypoints_for_sim_img_func);
+    // Py_XDECREF(get_matched_keypoints_for_sim_img_func);
     Py_XDECREF(get_matched_keypoints_for_sim_img_result);
 
     for (int i = 0; i < keypoints2.size(); ++i) {
@@ -277,13 +204,22 @@ void get_all_matches_for_sim_img(std::string const& query_img_path, std::string 
                 obs.x() = obs.x() - 1280/2;
                 obs.y() = obs.y() - 960/2;
                 camera_params.Convert<camera::DISTORTED_C, camera::UNDISTORTED_C>(obs, &obs);
-                // skip if obs is already in observations
-                // if (std::find(observations.begin(), observations.end(), obs) != observations.end()) {
-                //     continue;
-                // }
+
+                const int landmark_id = fid_to_pid.at(j);
+                // skip if the match is already added
+                std::vector<Eigen::Vector2d>::iterator it = std::find(observations.begin(), observations.end(), obs);
+
+                if (it != observations.end()) {
+                    // Element found, compute the index using std::distance
+                    size_t index = std::distance(observations.begin(), it);
+
+                    // if obs is in observations and landmark is in landmarks at corresonding index, skip
+                    if (landmarks[index] == pid_to_xyz[landmark_id]) {
+                        continue;
+                    }
+                }
 
                 observations.push_back(obs);
-                const int landmark_id = fid_to_pid.at(j);
                 landmarks.push_back(pid_to_xyz[landmark_id]);
                 found_keypoint = true;
                 break;
@@ -327,8 +263,140 @@ void plotPointsOnImage(const std::string& image_path, const std::vector<Eigen::V
     cv::waitKey(0);
     cv::destroyAllWindows();
 }
-bool sparse_mapping::test_func(){
-    return true;
+
+void get_keypoints_from_image(std::string img_path, PyObject *module, std::vector<Eigen::Vector2d> & keypoints){
+    // call the python function
+    PyObject* arg1Obj = PyUnicode_FromString(img_path.c_str());
+    PyObject* argsTuple = PyTuple_New(1);
+    PyTuple_SetItem(argsTuple, 0, arg1Obj);
+    PyObject* get_keypoints_from_masked_image_result = PyObject_CallObject(module, argsTuple);
+    Py_DECREF(argsTuple);
+    // Extract the results and put them in a vector
+    for (Py_ssize_t i = 0; i < PyList_Size(get_keypoints_from_masked_image_result); ++i) {
+        PyObject* keypoint_obj = PyList_GetItem(get_keypoints_from_masked_image_result, i);
+
+        float x = PyFloat_AsDouble(PyTuple_GetItem(keypoint_obj, 0));
+        float y = PyFloat_AsDouble(PyTuple_GetItem(keypoint_obj, 1));
+
+        // Create a Eigen::Vector2d object and add it to keypoints
+        keypoints.push_back(Eigen::Vector2d(x, y));
+    }
+    
+}
+
+
+void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){ // copy the object instead of pass by reference
+    // initialize the python interpreter
+    PythonInterpreter::getInstance().initialize();
+    PyObject *module = PythonInterpreter::getInstance().get_keypoints_from_masked_image_func;
+    
+    std::string map_image_dir = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
+    // get a list of filenames for all the images in the map
+    std::vector<std::string> new_cid_to_filename;
+    int count = 0;
+    for (auto const& x : map.cid_to_filename_) {
+        if (count > 5){ // this just to test with a few images
+            break;
+        }
+        // split the path and get the filename
+        boost::filesystem::path filePath(x);
+        std::string filename = filePath.filename().string();
+        std::string full_image_path = map_image_dir + filename;
+        // check if the file exists
+        if (boost::filesystem::exists(full_image_path)) {
+            new_cid_to_filename.push_back(full_image_path);
+            count++;
+        }
+    }
+
+    std::vector<Eigen::Matrix2Xd > cid_to_keypoint_map_new;
+    std::vector<cv::Mat> cid_to_descriptor_map_new;
+
+    std::vector<std::map<int, int> > pid_to_cid_fid_new;
+    // std::vector<Eigen::Vector3d> pid_to_xyz_new;
+    std::vector<Eigen::Affine3d > cid_to_cam_t_global_new(map.cid_to_cam_t_global_.begin(),
+                                                            map.cid_to_cam_t_global_.begin()+new_cid_to_filename.size()); // probably don't need this bc cids are in the same order
+    // generated on load
+    std::vector<std::map<int, int> > cid_fid_to_pid_new;
+
+    // call the python function
+    std::vector<Eigen::Vector2d> keypoints;
+    std::vector<int> fids; // maps fid of new to fid of old
+    for (int i = 0; i < new_cid_to_filename.size(); i++){
+        get_keypoints_from_image(new_cid_to_filename[i], module, keypoints);
+
+        // find indices keypoint in keypoint_map
+        Eigen::Matrix2Xd keypoint_list = map.cid_to_keypoint_map_[i];
+        for (int j = 0; j < keypoints.size(); j++){
+            Eigen::Vector2d keypoint = keypoints[j];
+            keypoint.x() = keypoint.x() - 1280/2;
+            keypoint.y() = keypoint.y() - 960/2;
+            map.camera_params_.Convert<camera::DISTORTED_C, camera::UNDISTORTED_C>(keypoint, &keypoint);
+            bool found_keypoint = false;
+            for (int k = 0; k < keypoint_list.cols(); k++){
+                Eigen::Vector2d keypoint_list_keypoint = keypoint_list.col(k);
+                if (keypoint_list_keypoint == keypoint){
+                    fids.push_back(k);
+                    found_keypoint = true;
+                    break;
+                }
+            }
+            if (!found_keypoint){
+                std::cout << "Could not find keypoint " << keypoint << std::endl;
+            }
+        }
+        // make keypoints into an Eigen::Matrix2d and add to cid_to_keypoint_map_new
+        Eigen::Matrix2Xd keypoint_matrix(2, keypoints.size());
+        for (int j = 0; j < keypoints.size(); j++){
+            keypoint_matrix.col(j) = keypoints[j];
+        }
+        cid_to_keypoint_map_new.push_back(keypoint_matrix);
+        // make new cv::Mat and add to cid_to_descriptor_map_new
+        cv::Mat descriptors_old = map.cid_to_descriptor_map_[i];
+        // get fid indices from descriptors_old and make into new cv::Mat
+        cv::Mat descriptors_new(fids.size(), descriptors_old.cols, descriptors_old.type());
+        for (int j = 0; j < fids.size(); j++){
+            descriptors_old.row(fids[j]).copyTo(descriptors_new.row(j));
+        }
+        cid_to_descriptor_map_new.push_back(descriptors_new);
+
+        // change the fids
+        std::map<int, int> fid_to_pid_new;
+        std::map<int, int> fid_to_pid = map.cid_fid_to_pid_[i];
+        for (int j = 0; j < fids.size(); j++){
+            fid_to_pid_new[j] = fid_to_pid[fids[j]];
+        }
+        cid_fid_to_pid_new.push_back(fid_to_pid_new);
+
+        // clear the keypoints vector
+        keypoints.clear();
+    }
+
+    // use cid_fid_to_pid_new to make pid_to_cid_fid_new
+    for (int i = 0; i < cid_fid_to_pid_new.size(); i++){
+        std::map<int, int> fid_to_pid = cid_fid_to_pid_new[i];
+        for (auto const& x : fid_to_pid) {
+            int fid = x.first;
+            int pid = x.second;
+            pid_to_cid_fid_new[pid][i] = fid;
+        }
+    }
+
+    // set all map attributes to the new attrubutes
+    map.cid_to_filename_ = new_cid_to_filename;
+    map.cid_to_keypoint_map_ = cid_to_keypoint_map_new;
+    map.cid_to_descriptor_map_ = cid_to_descriptor_map_new;
+    map.cid_fid_to_pid_ = cid_fid_to_pid_new;
+    map.pid_to_cid_fid_ = pid_to_cid_fid_new;
+    map.cid_to_cam_t_global_ = cid_to_cam_t_global_new;
+
+    // make new vocabulary
+    BuildDBforDBoW2(&map, "SURF",
+                     5, 10,
+                     0);
+    // save the map
+    map.Save("/home/lmao/Documents/test_masked_map.map");
+
 }
 
 bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &image_descriptors, Eigen::Matrix2Xd &image_keypoints,
@@ -336,14 +404,14 @@ bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &
     static int count = 0;
     // Initialize the Python interpreter
     PythonInterpreter::getInstance().initialize();
-    PyObject *module = PythonInterpreter::getInstance().module;
+    PyObject *module = PythonInterpreter::getInstance().get_matched_keypoints_for_sim_img_func;
 
     std::vector<int> indices;
     // query the vocab database
     sparse_mapping::QueryDB(map.GetDetectorName(),
                             &(map.vocab_db_),
                             // Notice that we request more similar
-                            // images than what we need. We'll prune
+                            // images than what we need. We'll pruneFZF
                             // them below.
                             20,
                             image_descriptors,
@@ -368,7 +436,8 @@ bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &
     std::vector<int> highly_ranked = ff_common::rv_order(similarity_rank);
 
     std::string map_image_dir = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
-    std::string img_path = "/home/lmao/Documents/yaw2_images/"+std::to_string(count)+".jpg";
+    std::string img_path = "/home/lmao/Documents/bumble0401_1517_images/"+std::to_string(count)+".jpg";
+    std::cout << "img_path: " << img_path << std::endl;
     std::vector<Eigen::Vector3d> landmarks;
     std::vector<Eigen::Vector2d> observations;
 
@@ -381,7 +450,7 @@ bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &
         boost::filesystem::path filePath(path);
         std::string filename = filePath.filename().string();
         std::string sim_img_path = map_image_dir + filename;
-        // std::cout << cid << " sim_img_path: " << sim_img_path << std::endl;
+        // std::cout << i<< " " << cid << " sim_img_path: " << sim_img_path << std::endl;
 
         get_all_matches_for_sim_img(img_path, sim_img_path,
                         keypoint_list,
@@ -406,19 +475,24 @@ bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &
 
 int main() {
 
-
+/*
     // Initialize the Python interpreter
     PythonInterpreter::getInstance().initialize();
-    PyObject *module = PythonInterpreter::getInstance().module;
+    PyObject *module = PythonInterpreter::getInstance().get_matched_keypoints_for_sim_img_func;
     std::cout << "module: " << module << std::endl;
+
+*/
     // Create a Sparse Map
     sparse_mapping::SparseMap map("/home/lmao/Documents/20210304_aach.surf.vocab.hist_eq.map", true);
     std::cout<<"Loaded map with "<<map.GetNumFrames()<<std::endl;
+    sparse_mapping::make_map_from_masked_images(map);
 
+/*
     std::vector<int> indices;
     cv::Mat test_descriptors;
     Eigen::Matrix2Xd test_keypoints;
-    std::string img_path = "/home/lmao/Documents/yaw2_images/20.jpg";
+    std::string img_path = "/home/lmao/Documents/20220513_1623_MobNavDepth_kibo_rpc_waypoint_test_images/18.jpg";
+    // std::string img_path = "/home/lmao/Documents/yaw2_images/20.jpg";
     std::cout << "img_path: " << img_path << std::endl;
     map.DetectFeaturesFromFile(img_path,
                                       false,
@@ -528,10 +602,10 @@ int main() {
     std::cout << "ret: " << ret << std::endl;
     std::cout << "num inliers " << inlier_landmarks.size() << std::endl;
     // clean up
-    Py_XDECREF(module);
+    // Py_XDECREF(module);
 
     // Finalize the Python interpreter
-    Py_Finalize();
+    // Py_Finalize();
 
 
     /////////////////////////////////
@@ -570,6 +644,6 @@ int main() {
     plotPointsOnImage(img_path, observations, inlier_observations);
 
 
-
+*/
     return 0;
 }

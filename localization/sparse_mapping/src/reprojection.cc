@@ -395,6 +395,8 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
   if (verbose)
     std::cout << observations.size() << " Ransac observations "
               << best_inliers << " inliers\n";
+  if (best_inliers < 4)
+    return 2;
 
   std::vector<size_t> inliers;
   CountInliers(landmarks, observations, *camera_estimate, inlier_tolerance, &inliers);
@@ -436,19 +438,19 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
   ceres::Solver::Summary summary;
 
   // print camera
-    std::cout << "camera: x " << camera_estimate->GetPosition()[0] << std::endl;
-    std::cout << "camera: y " << camera_estimate->GetPosition()[1] << std::endl;
-    std::cout << "camera: z " << camera_estimate->GetPosition()[2] << std::endl;
+    // std::cout << "camera: x " << camera_estimate->GetPosition()[0] << std::endl;
+    // std::cout << "camera: y " << camera_estimate->GetPosition()[1] << std::endl;
+    // std::cout << "camera: z " << camera_estimate->GetPosition()[2] << std::endl;
 
 
   // print inlier landmarks size
-  std::cout << "inlier landmarks size: " << inlier_landmarks.size() << std::endl;
-  // print inlier observations size
-  std::cout << "inlier observations size: " << inlier_observations.size() << std::endl;
-  // print landmarks size
-  std::cout << "landmarks size: " << landmarks.size() << std::endl;
-  // print observations size
-  std::cout << "observations size: " << observations.size() << std::endl;
+  // std::cout << "inlier landmarks size: " << inlier_landmarks.size() << std::endl;
+  // // print inlier observations size
+  // std::cout << "inlier observations size: " << inlier_observations.size() << std::endl;
+  // // print landmarks size
+  // std::cout << "landmarks size: " << landmarks.size() << std::endl;
+  // // print observations size
+  // std::cout << "observations size: " << observations.size() << std::endl;
 
   // improve estimate with CERES solver
   EstimateCamera(camera_estimate, &inlier_landmarks, inlier_observations, options, &summary);
@@ -457,7 +459,7 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
   inliers.clear();
   best_inliers = CountInliers(landmarks, observations, *camera_estimate, inlier_tolerance, &inliers);
   
-  std::cout << "after ceres" << std::endl;
+  // std::cout << "after ceres" << std::endl;
 
   if (verbose)
     std::cout << "Number of inliers with refined camera: " << best_inliers << "\n";
@@ -466,9 +468,9 @@ int RansacEstimateCamera(const std::vector<Eigen::Vector3d> & landmarks,
     // return 2;
 
   // print camera
-    std::cout << "camera: x " << camera_estimate->GetPosition()[0] << std::endl;
-    std::cout << "camera: y " << camera_estimate->GetPosition()[1] << std::endl;
-    std::cout << "camera: z " << camera_estimate->GetPosition()[2] << std::endl;
+    // std::cout << "camera: x " << camera_estimate->GetPosition()[0] << std::endl;
+    // std::cout << "camera: y " << camera_estimate->GetPosition()[1] << std::endl;
+    // std::cout << "camera: z " << camera_estimate->GetPosition()[2] << std::endl;
 
   if (best_inliers < 4)
     return 2;
