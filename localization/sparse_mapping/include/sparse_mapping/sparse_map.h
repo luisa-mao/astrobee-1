@@ -46,7 +46,7 @@ namespace cv {
 namespace sparse_mapping {
 
 // non-member hacky segment match
-void make_map_from_masked_images(SparseMap map);
+// void make_map_from_masked_images(SparseMap map);
 bool semantic_localize(SparseMap & map, cv::Mat &image_descriptors, Eigen::Matrix2Xd &image_keypoints,
                                camera::CameraModel &camera, std::vector<Eigen::Vector3d> &inlier_landmarks, std::vector<Eigen::Vector2d>&inlier_observations);
 

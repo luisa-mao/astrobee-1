@@ -271,6 +271,7 @@ void get_keypoints_from_image(std::string img_path, PyObject *module, std::vecto
     PyTuple_SetItem(argsTuple, 0, arg1Obj);
     PyObject* get_keypoints_from_masked_image_result = PyObject_CallObject(module, argsTuple);
     Py_DECREF(argsTuple);
+
     // Extract the results and put them in a vector
     for (Py_ssize_t i = 0; i < PyList_Size(get_keypoints_from_masked_image_result); ++i) {
         PyObject* keypoint_obj = PyList_GetItem(get_keypoints_from_masked_image_result, i);
@@ -281,11 +282,72 @@ void get_keypoints_from_image(std::string img_path, PyObject *module, std::vecto
         // Create a Eigen::Vector2d object and add it to keypoints
         keypoints.push_back(Eigen::Vector2d(x, y));
     }
+    // print keypoints list
+    // std::cout << "keypoints size after python function " << keypoints.size() << std::endl;
+    // for (int j = 0; j < 5; j++){
+    //     std::cout << keypoints[j][0] <<"  "<< keypoints[j][1] << std::endl;
+    // }
+
     
 }
 
+void fix_vocab(sparse_mapping::SparseMap &og_map, sparse_mapping::SparseMap &map) {
+    map.vocab_db_ = og_map.vocab_db_;
+    map.Save("/home/lmao/Documents/baburen.map");
 
-void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){ // copy the object instead of pass by reference
+}
+
+void compare_map_cids(sparse_mapping::SparseMap &og_map, sparse_mapping::SparseMap &map) {
+    std::string map_image_dir = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
+    // get a list of filenames for all the images in the map
+    std::vector<std::string> og_map_filenames;
+    for (auto const& x : og_map.cid_to_filename_) {
+        // if (count > 5){ // this just to test with a few images
+        //     break;
+        // }
+        // split the path and get the filename
+        boost::filesystem::path filePath(x);
+        std::string filename = filePath.filename().string();
+        std::string full_image_path = map_image_dir + filename;
+        // check if the file exists
+        if (boost::filesystem::exists(full_image_path)) {
+            og_map_filenames.push_back(full_image_path);
+        }
+    }
+    int count = 0;
+    std::vector<std::string> map_filenames;
+    for (auto const& x : map.cid_to_filename_) {
+        // if (count > 20){ // this just to test with a few images
+        //     break;
+        // }
+        // split the path and get the filename
+        boost::filesystem::path filePath(x);
+        // print the path
+        // std::cout << "filePath: " << filePath << std::endl;
+        std::string filename = filePath.filename().string();
+        std::string full_image_path = map_image_dir + filename;
+        // check if the file exists
+        if (boost::filesystem::exists(full_image_path)) {
+            map_filenames.push_back(full_image_path);
+        }
+        count++;
+    }
+
+    // print lengths
+    std::cout << "og_map_filenames size: " << og_map_filenames.size() << std::endl;
+    std::cout << "map_filenames size: " << map_filenames.size() << std::endl;
+
+    // if filename in map is not in og_map, print the filename and index
+    for (int i = 0; i < map_filenames.size(); i++){
+        std::string filename = map_filenames[i];
+        if (std::find(og_map_filenames.begin(), og_map_filenames.end(), filename) == og_map_filenames.end()){
+            std::cout << "filename: " << filename << " index: " << i << std::endl;
+        }
+    }
+}
+
+
+void make_map_from_masked_images(sparse_mapping::SparseMap &map){ // pass by reference
     // initialize the python interpreter
     PythonInterpreter::getInstance().initialize();
     PyObject *module = PythonInterpreter::getInstance().get_keypoints_from_masked_image_func;
@@ -295,9 +357,9 @@ void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){
     std::vector<std::string> new_cid_to_filename;
     int count = 0;
     for (auto const& x : map.cid_to_filename_) {
-        if (count > 5){ // this just to test with a few images
-            break;
-        }
+        // if (count > 5){ // this just to test with a few images
+        //     break;
+        // }
         // split the path and get the filename
         boost::filesystem::path filePath(x);
         std::string filename = filePath.filename().string();
@@ -312,17 +374,18 @@ void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){
     std::vector<Eigen::Matrix2Xd > cid_to_keypoint_map_new;
     std::vector<cv::Mat> cid_to_descriptor_map_new;
 
-    std::vector<std::map<int, int> > pid_to_cid_fid_new;
+
     // std::vector<Eigen::Vector3d> pid_to_xyz_new;
     std::vector<Eigen::Affine3d > cid_to_cam_t_global_new(map.cid_to_cam_t_global_.begin(),
                                                             map.cid_to_cam_t_global_.begin()+new_cid_to_filename.size()); // probably don't need this bc cids are in the same order
-    // generated on load
     std::vector<std::map<int, int> > cid_fid_to_pid_new;
 
     // call the python function
     std::vector<Eigen::Vector2d> keypoints;
     std::vector<int> fids; // maps fid of new to fid of old
     for (int i = 0; i < new_cid_to_filename.size(); i++){
+        // print the cid
+        std::cout << "cid: " << i << std::endl;
         get_keypoints_from_image(new_cid_to_filename[i], module, keypoints);
 
         // find indices keypoint in keypoint_map
@@ -342,15 +405,18 @@ void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){
                 }
             }
             if (!found_keypoint){
-                std::cout << "Could not find keypoint " << keypoint << std::endl;
+                // std::cout << "Could not find keypoint " << keypoint << std::endl;
             }
         }
+        // print fids list length
+
         // make keypoints into an Eigen::Matrix2d and add to cid_to_keypoint_map_new
-        Eigen::Matrix2Xd keypoint_matrix(2, keypoints.size());
-        for (int j = 0; j < keypoints.size(); j++){
-            keypoint_matrix.col(j) = keypoints[j];
+        Eigen::Matrix2Xd keypoint_matrix(2, fids.size());
+        for (int j = 0; j < fids.size(); j++){
+            keypoint_matrix.col(j) = keypoint_list.col(fids[j]);
         }
         cid_to_keypoint_map_new.push_back(keypoint_matrix);
+
         // make new cv::Mat and add to cid_to_descriptor_map_new
         cv::Mat descriptors_old = map.cid_to_descriptor_map_[i];
         // get fid indices from descriptors_old and make into new cv::Mat
@@ -358,6 +424,7 @@ void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){
         for (int j = 0; j < fids.size(); j++){
             descriptors_old.row(fids[j]).copyTo(descriptors_new.row(j));
         }
+        // print the size of the new descriptors
         cid_to_descriptor_map_new.push_back(descriptors_new);
 
         // change the fids
@@ -367,20 +434,21 @@ void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){
             fid_to_pid_new[j] = fid_to_pid[fids[j]];
         }
         cid_fid_to_pid_new.push_back(fid_to_pid_new);
-
         // clear the keypoints vector
         keypoints.clear();
+        fids.clear();
     }
 
-    // use cid_fid_to_pid_new to make pid_to_cid_fid_new
-    for (int i = 0; i < cid_fid_to_pid_new.size(); i++){
-        std::map<int, int> fid_to_pid = cid_fid_to_pid_new[i];
+    // make pid_cid_to_fid from cid_fid_to_pid
+    std::vector<std::map<int, int> > pid_to_cid_fid_new;
+    pid_to_cid_fid_new.resize(map.pid_to_xyz_.size(), std::map<int, int>());
+    for (int cid = 0; cid < cid_fid_to_pid_new.size(); cid++){
+        std::map<int, int> fid_to_pid = cid_fid_to_pid_new[cid];
         for (auto const& x : fid_to_pid) {
-            int fid = x.first;
-            int pid = x.second;
-            pid_to_cid_fid_new[pid][i] = fid;
+            pid_to_cid_fid_new[x.second][cid] = x.first;
         }
     }
+
 
     // set all map attributes to the new attrubutes
     map.cid_to_filename_ = new_cid_to_filename;
@@ -389,11 +457,13 @@ void sparse_mapping::make_map_from_masked_images(sparse_mapping::SparseMap map){
     map.cid_fid_to_pid_ = cid_fid_to_pid_new;
     map.pid_to_cid_fid_ = pid_to_cid_fid_new;
     map.cid_to_cam_t_global_ = cid_to_cam_t_global_new;
+    std::cout<< "set all map attributes to the new attributes " << std::endl;
 
     // make new vocabulary
     BuildDBforDBoW2(&map, "SURF",
                      5, 10,
                      0);
+    std::cout<< "made new vocabulary " << std::endl;
     // save the map
     map.Save("/home/lmao/Documents/test_masked_map.map");
 
@@ -473,6 +543,7 @@ bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &
     return (ret == 0);
 }
 
+
 int main() {
 
 /*
@@ -481,17 +552,21 @@ int main() {
     PyObject *module = PythonInterpreter::getInstance().get_matched_keypoints_for_sim_img_func;
     std::cout << "module: " << module << std::endl;
 
-*/
     // Create a Sparse Map
-    sparse_mapping::SparseMap map("/home/lmao/Documents/20210304_aach.surf.vocab.hist_eq.map", true);
+*/
+    sparse_mapping::SparseMap og_map("/home/lmao/Documents/20210304_aach.surf.vocab.hist_eq.map", false);
+    sparse_mapping::SparseMap map("/srv/novus_1/rsoussan/maps/luisa_surf/20220111_Soundsee_Cabanel_Base_cmS4_cmS3_reg.surf.map", true);
     std::cout<<"Loaded map with "<<map.GetNumFrames()<<std::endl;
-    sparse_mapping::make_map_from_masked_images(map);
+    std::cout<<"Loaded og map with "<<og_map.GetNumFrames()<<std::endl;
+    // make_map_from_masked_images(map);
+    // fix_vocab(og_map, map);
+    compare_map_cids(og_map, map);
 
 /*
     std::vector<int> indices;
     cv::Mat test_descriptors;
     Eigen::Matrix2Xd test_keypoints;
-    std::string img_path = "/home/lmao/Documents/20220513_1623_MobNavDepth_kibo_rpc_waypoint_test_images/18.jpg";
+    std::string img_path = "/home/lmao/Documents/yaw2_images/129.jpg";
     // std::string img_path = "/home/lmao/Documents/yaw2_images/20.jpg";
     std::cout << "img_path: " << img_path << std::endl;
     map.DetectFeaturesFromFile(img_path,

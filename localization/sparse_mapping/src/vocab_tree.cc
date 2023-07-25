@@ -498,13 +498,16 @@ void MatDescrToVec(cv::Mat const& mat, std::vector<float> * vec) {
   // Go from a row matrix of float descriptors to a vector of
   // descriptors.
 
+  // print the dimensions of the matrix
+  // std::cout << mat.rows << " " << mat.cols << std::endl;
+
   if (mat.rows != 1)
     LOG(FATAL) << "Expecting a single-row matrix.\n";
 
   (*vec).reserve(mat.cols);
   (*vec).clear();
   for (int c = 0; c < mat.cols; c++) {
-    float val = static_cast<float>(mat.at<float>(0, c));
+    float val = mat.at<float>(0, c);
     (*vec).push_back(val);
   }
 }
@@ -589,19 +592,30 @@ void BuildDBforDBoW2(SparseMap* map, std::string const& descriptor,
   const DBoW2::ScoringType score = DBoW2::L1_NORM;
   int num_features = 0;
 
+  // print num frames
+  std::cout << "Number of frames: " << num_frames << std::endl;
+
+  // print descriptor
+  LOG(INFO) << "Using " << descriptor << " descriptors. " << !IsBinaryDescriptor(descriptor) << "\n";
+
   if (!IsBinaryDescriptor(descriptor)) {
     // std::string dir_path = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
     // cv::Ptr<cv::Feature2D> fdetector = cv::xfeatures2d::SURF::create(400, 4, 2, false);
     std::vector<std::vector<DBoW2::FSurf64::TDescriptor > > features;
     for (int cid = 0; cid < num_frames; cid++) {
       int num_keys = map->GetFrameKeypoints(cid).outerSize();
+      // print num keys
       num_features += num_keys;
       std::vector<DBoW2::FSurf64::TDescriptor> descriptors;
       for (int i = 0; i < num_keys; i++) {
+        // std::cout << "Frame: " << cid << " Keypoint: " << i << " num keys " << std::endl;
         cv::Mat row = map->GetDescriptor(cid, i);
+        // print the shape of the row
+        // std::cout << row.rows << " " << row.cols << std::endl;
         DBoW2::FSurf64::TDescriptor descriptor;
         MatDescrToVec(row, &descriptor);
         descriptors.push_back(descriptor);
+        // std::cout << "Descriptor size: " << descriptor.size() << std::endl;
       }
       // std::string img_name = dir_path + getFilenameFromPath(map->GetFrameFilename(cid));
       // cv::Mat image = cv::imread(img_name, 0);
