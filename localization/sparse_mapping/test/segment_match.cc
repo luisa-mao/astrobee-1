@@ -506,7 +506,7 @@ bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &
     std::vector<int> highly_ranked = ff_common::rv_order(similarity_rank);
 
     std::string map_image_dir = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
-    std::string img_path = "/home/lmao/Documents/bumble0401_1517_images/"+std::to_string(count)+".jpg";
+    std::string img_path = "/home/lmao/Documents/yaw1_images/"+std::to_string(count)+".jpg";
     std::cout << "img_path: " << img_path << std::endl;
     std::vector<Eigen::Vector3d> landmarks;
     std::vector<Eigen::Vector2d> observations;
