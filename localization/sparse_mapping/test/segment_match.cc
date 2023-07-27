@@ -8,10 +8,13 @@
 #include <ff_common/thread.h>
 #include <ff_common/utils.h>
 #include <sparse_mapping/reprojection.h>
+#include <gflags/gflags.h>
 #include "json.hpp"
 
 using json = nlohmann::json;
 
+// make a string flag
+DEFINE_string(semantic_loc_bag_img_dir, "/home/lmao/Documents/yaw2_images", "Path to bag images");
 class PythonInterpreter {
 public:
     PyObject* get_matched_keypoints_for_sim_img_func;
@@ -506,7 +509,7 @@ bool sparse_mapping::semantic_localize(sparse_mapping::SparseMap &map, cv::Mat &
     std::vector<int> highly_ranked = ff_common::rv_order(similarity_rank);
 
     std::string map_image_dir = "/srv/novus_1/amoravar/data/images/latest_map_imgs/2020-09-24/";
-    std::string img_path = "/home/lmao/Documents/yaw1_images/"+std::to_string(count)+".jpg";
+    std::string img_path = FLAGS_semantic_loc_bag_img_dir +std::to_string(count)+".jpg";
     std::cout << "img_path: " << img_path << std::endl;
     std::vector<Eigen::Vector3d> landmarks;
     std::vector<Eigen::Vector2d> observations;
